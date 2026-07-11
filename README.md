@@ -1,229 +1,279 @@
+
 # devclean
 
-A professional terminal tool for auditing and safely cleaning
-developer-related disk usage on macOS. Built for Flutter/iOS/Android
-developers juggling Xcode, Simulators, Gradle, CocoaPods, Node, and
-Firebase caches that quietly eat tens of gigabytes.
+> Safe macOS cleanup for Flutter, iOS, Android and Node.js developers.
 
-## Purpose
+---
 
-Developer tooling on macOS accumulates disk usage fast: Xcode DerivedData,
-old Simulator devices, iOS DeviceSupport files, Gradle/CocoaPods/npm
-caches, Docker images, Homebrew downloads. `devclean` audits all of it in
-one place and lets you reclaim space **safely, deliberately, and with full
-visibility into what will happen before it happens.**
+## Quick Clean Preview
 
-## Safety model
+![Quick Clean](assets/screenshots/quick-clean.png)
+> Safe macOS cleanup for Flutter, iOS, Android and Node.js developers.
 
-devclean is built around one rule: **nothing is ever deleted without an
-explicit confirmation**, and dry-run mode can prove it.
+`devclean` is a professional command-line tool that audits developer-related
+disk usage on macOS and safely removes recreatable caches with explicit
+confirmation.
 
-- **Read-only by default.** `devclean scan`, `devclean doctor`, and
-  `devclean report` never modify anything.
-- **Every destructive action explains itself first**: target path or
-  command, current size, what will be lost, whether it can be recreated,
-  and the exact action about to run.
-- **Two confirmation tiers:**
-  - Low-risk, fully recreatable caches (Xcode DerivedData, CocoaPods
-    cache, Flutter pub-cache, npm/yarn cache, Homebrew cache) ask a plain
-    `y/N`.
-  - High-impact actions - Simulator deletion, iOS DeviceSupport removal,
-    Xcode Archive removal, Docker pruning, AVD deletion, project build
-    folder deletion - require typing `DELETE` in full.
-- **Global `--dry-run`** works for every command and the interactive menu.
-  It never deletes anything; it prints exactly what would run and
-  estimates space that would be reclaimed.
-- **Confined to your home directory.** The internal path-safety guard
-  (`is_dangerous_path`) refuses to operate on empty paths, `/`, `$HOME`
-  itself, or anything outside `$HOME`. It also refuses common system
-  directories outright.
-- **No sudo, ever**, for normal operation.
-- **WhatsApp data is never touched.** devclean only measures and, on
-  request, reveals the folder in Finder.
+Unlike generic cleanup tools, **devclean understands developer environments**
+including Xcode, iOS Simulators, Flutter, Gradle, CocoaPods, Node.js,
+Homebrew and Docker.
 
-## Installation
+---
 
-```sh
-cd ~/Tools/devclean
+## ✨ Features
+
+## Scan
+
+devclean scans your complete development environment and estimates reclaimable storage.
+
+![Scan](assets/screenshots/scan.png)
+
+- Audit developer disk usage
+-  Diagnose development environment (`doctor`)
+-  Safe cache cleanup
+-  Global `--dry-run` mode
+-  TXT & JSON reports
+-  Xcode cleanup
+-  iOS Simulator cleanup
+-  Flutter & Dart cleanup
+-  Android & Gradle cleanup
+-  Node / npm cleanup
+-  Homebrew cleanup
+-  Docker cleanup
+-  WhatsApp storage audit (read-only)
+
+---
+
+## Why devclean?
+
+A macOS developer machine slowly fills with:
+
+- Xcode DerivedData
+- Simulator devices
+- iOS DeviceSupport
+- Gradle caches
+- CocoaPods caches
+- Flutter pub-cache
+- npm/yarn caches
+- Docker images
+- Homebrew downloads
+
+Finding these manually is tedious.
+
+**devclean scans them all in one place** and shows exactly what is safe to
+remove before anything happens.
+
+---
+
+# Safety First
+
+Safety is the primary design goal.
+
+devclean **never deletes anything automatically.**
+
+Every cleanup operation is explained before execution and always requires
+confirmation.
+
+There are two confirmation levels:
+
+| Operation | Confirmation |
+|-----------|--------------|
+| Safe caches | `y/N` |
+| High-impact operations | Type `DELETE` |
+
+Examples of high-impact operations:
+
+- Simulator deletion
+- DeviceSupport removal
+- Docker prune
+- Archive removal
+- Project build folders
+
+---
+
+## Dry Run
+
+Every cleanup command supports dry-run.
+
+```bash
+devclean --dry-run clean
+```
+
+Instead of deleting anything it prints:
+
+```
+[DRY-RUN] remove DerivedData
+[DRY-RUN] npm cache clean
+...
+```
+
+This allows you to verify exactly what will happen.
+
+---
+
+# Installation
+
+Clone the repository:
+
+```bash
+git clone https://github.com/YOUR_USERNAME/devclean.git
+cd devclean
+```
+
+Install:
+
+```bash
 ./install.sh
 ```
 
-`install.sh`:
+Run:
 
-1. Makes the executables runnable.
-2. Creates `logs/` and `reports/` if missing.
-3. Tries to symlink `devclean` onto your `PATH` at `/opt/homebrew/bin`
-   (Apple Silicon) or `/usr/local/bin` - only if writable without `sudo`,
-   and only after you confirm.
-4. If neither location is writable, it offers to add a single, clearly
-   marked alias line to `~/.zshrc`, after backing up your existing
-   `~/.zshrc`. It will never add the alias twice.
-
-Nothing is installed silently - every step prints what it did.
-
-### Uninstalling
-
-```sh
-./uninstall.sh
-```
-
-Removes only the symlink or alias this installer created. It never
-deletes `logs/`, `reports/`, or the source directory unless you pass
-`--purge-logs` / `--purge-reports`, and even then it asks first.
-
-## Commands
-
-```
-devclean            Open the interactive menu
-devclean scan        Scan known developer locations and print a summary
-devclean clean        Open the interactive safe-clean menu
-devclean doctor       Check the health of your development environment
-devclean report       Generate a timestamped TXT and JSON report
-devclean --dry-run    Combine with any command; never deletes anything
-devclean --help
-devclean --version
-```
-
-### Interactive menu
-
-```
+```bash
 devclean
 ```
 
-```
-DEV CLEAN v1.0.0
+---
 
-Disk free: 56 GB
-Potentially recoverable: 28 GB
+# Commands
 
-  1) Scan system
-  2) Quick clean
-  3) Xcode cleanup
-  4) Simulator cleanup
-  5) Android / Gradle cleanup
-  6) Flutter cleanup
-  7) Node cleanup
-  8) Docker cleanup
-  9) WhatsApp storage audit
- 10) Developer doctor
- 11) Generate report
-  0) Exit
-```
+| Command | Description |
+|----------|-------------|
+| `devclean` | Interactive menu |
+| `devclean scan` | Disk usage audit |
+| `devclean clean` | Cleanup menu |
+| `devclean doctor` | Environment diagnostics |
+| `devclean report` | TXT + JSON reports |
+| `devclean --dry-run` | Preview without deleting |
 
-## Dry-run examples
 
-```sh
-devclean --dry-run scan
-devclean --dry-run clean
-devclean --dry-run doctor
-```
+## Developer Doctor
 
-In dry-run mode every destructive helper (`run_or_dry`, `safe_remove_path`)
-prints `[DRY-RUN] ...` instead of executing, and still logs what it would
-have done to `logs/`.
+Check your development environment in seconds.
 
-## What each cleaner removes
+![Doctor](assets/screenshots/doctor.png)
 
-| Module      | Removes (after confirmation)                                            | Confirmation |
-|-------------|---------------------------------------------------------------------------|--------------|
-| Xcode       | DerivedData                                                                | y/N |
-| Xcode       | iOS DeviceSupport versions you select                                      | DELETE |
-| Xcode       | Archives you select                                                        | DELETE |
-| Simulator   | Unavailable / selected devices (`simctl delete`)                          | DELETE |
-| Simulator   | Erase content & settings on selected devices (`simctl erase`)             | DELETE |
-| Android     | Selected AVDs                                                              | DELETE |
-| Android     | `build`/`.gradle` inside a project path you type                          | DELETE |
-| Gradle      | `~/.gradle/caches`, `~/.gradle/wrapper`                                    | y/N |
-| Flutter     | `~/.pub-cache`                                                             | y/N |
-| Flutter     | `.dart_tool`/`build` inside a project path you type                       | DELETE |
-| CocoaPods   | `~/Library/Caches/CocoaPods`                                               | y/N |
-| CocoaPods   | `Pods/` inside a project path you type                                    | DELETE |
-| Node        | npm/yarn cache, pnpm store (via each tool's native cache command)         | y/N |
-| Docker      | Containers/images/volumes/build cache (`docker ... prune`)                | DELETE |
-| Homebrew    | `brew cleanup` (previewed first with `brew cleanup -n`)                   | y/N |
+---
 
-**Quick clean** bundles only the y/N-tier items above (Xcode DerivedData,
-CocoaPods cache, Flutter pub-cache, npm/yarn cache, Homebrew cache) plus
-devclean's own logs older than a configurable threshold (default 30 days,
-`DEVCLEAN_LOG_RETENTION_DAYS`).
+# What Can Be Cleaned?
 
-## What it never removes
+| Component | Supported |
+|------------|-----------|
+| Xcode DerivedData | ✅ |
+| DeviceSupport | ✅ |
+| Simulators | ✅ |
+| Flutter pub-cache | ✅ |
+| Gradle cache | ✅ |
+| CocoaPods cache | ✅ |
+| npm cache | ✅ |
+| Homebrew cache | ✅ |
+| Docker | ✅ |
 
-- The Android SDK install itself (report only)
-- `node_modules` anywhere, ever, automatically
-- Project source code, `.dart_tool`/`build`/`Pods`/Android `build` folders
-  outside a project path you explicitly typed
-- Credentials, SSH keys, signing certificates, provisioning profiles,
-  Firebase config files, `.env` files
-- Databases of any kind
-- WhatsApp message/media data (audit only - see below)
-- Anything outside `$HOME` (enforced by `is_dangerous_path`)
+---
 
-## Simulator workflow
+# What Will Never Be Removed
 
-`devclean` (menu) -> `4) Simulator cleanup`, or `devclean clean` ->
-`3) Simulator cleanup`:
+devclean intentionally refuses to touch:
 
-```
-  1) List devices              (name, runtime, state, UUID, size)
-  2) Delete unavailable devices (xcrun simctl delete unavailable)
-  3) Delete selected devices    (xcrun simctl delete <UUID>)
-  4) Erase selected devices     (xcrun simctl erase <UUID> - keeps device)
-  5) Shut down all booted simulators
-```
+- Source code
+- Git repositories
+- Credentials
+- SSH keys
+- Firebase configuration
+- Provisioning profiles
+- Signing certificates
+- Databases
+- `.env` files
+- Anything outside your home directory
+- WhatsApp messages or media
 
-A booted simulator is never deleted or erased - shut it down first.
-DELETE and ERASE are always presented and confirmed separately, since one
-removes the device and the other only wipes its content.
+---
 
-## WhatsApp warning
+# WhatsApp
 
-devclean audits `~/Library/Group Containers/group.net.whatsapp.WhatsApp.shared`
-(Message / Media / Logs sizes) and can open it in Finder. **It never
-deletes anything there and never will.** There is no reliable way for a
-generic tool to know what WhatsApp data is safe to lose - back up chats
-from within WhatsApp itself before manually removing anything.
+## WhatsApp Audit
 
-## Troubleshooting
+Storage is analyzed safely without deleting anything.
 
-- **"missing module" error on startup** - the install directory moved or a
-  `lib/*.sh` file was deleted; re-clone or restore the file.
-- **Colors look wrong / no colors** - devclean disables color automatically
-  when stdout isn't a TTY, or when `NO_COLOR` is set. Unset `NO_COLOR` to
-  re-enable.
-- **`devclean: command not found` after installing** - open a new
-  terminal, or `source ~/.zshrc` if `install.sh` fell back to the alias
-  path. Check `install.sh`'s summary output for exactly what it did.
-- **Docker section says daemon not reachable** - Docker Desktop isn't
-  running; devclean detects this instead of hanging indefinitely.
-- **Simulator list looks empty** - `xcrun simctl` requires the Xcode
-  command line tools; `devclean doctor` reports whether they're set up.
+![WhatsApp](assets/screenshots/whatsapp-audit.png)
 
-## Logs and reports
+devclean only audits WhatsApp storage.
 
-- Session logs: `logs/devclean-YYYYMMDD-HHMMSS.log` (paths examined,
-  actions approved/skipped, bytes before/after, errors - never file
-  contents).
-- Reports: `reports/devclean-report-YYYYMMDD-HHMMSS.{txt,json}` via
-  `devclean report`.
+It can:
 
-## Examples
+- measure storage usage
+- show Message / Media / Logs sizes
+- open the folder in Finder
 
-```sh
-devclean                    # interactive menu
-devclean scan                # read-only summary
-devclean --dry-run clean      # preview every cleanup category, delete nothing
-devclean doctor               # environment health check
-devclean report               # write a TXT + JSON report to reports/
+It **never deletes WhatsApp data.**
+
+---
+
+# Reports
+
+Generate machine-readable reports:
+
+```bash
+devclean report
 ```
 
-## Tests
+Outputs:
 
-```sh
-bash tests/smoke_test.sh
+```
+reports/
+    devclean-report-20260711.txt
+    devclean-report-20260711.json
+```
+
+---
+
+# Testing
+
+Run the test suite:
+
+```bash
 bash tests/test_utils.sh
+bash tests/smoke_test.sh
 ```
 
-## License
+---
 
-MIT - see [LICENSE](LICENSE).
+# Requirements
+
+- macOS
+- Bash
+- Xcode (optional)
+- Flutter (optional)
+- Android SDK (optional)
+- Homebrew (recommended)
+
+---
+
+# Roadmap
+
+## v1.1
+
+- Interactive progress bars
+- Disk usage history
+- Faster scanning
+- Brew package analysis
+- Export HTML reports
+
+## v1.2
+
+- Plugin architecture
+- CI support
+- Automatic update checker
+
+---
+
+# Contributing
+
+Contributions, bug reports and feature requests are welcome.
+
+Please open an issue before submitting major changes.
+
+---
+
+# License
+
+MIT License
