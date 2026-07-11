@@ -1,0 +1,109 @@
+#!/bin/bash
+#
+# devclean - audit and safely clean developer-related disk usage on macOS.
+#
+# Safe by default: nothing is ever deleted without explicit confirmation,
+# and every destructive path goes through a dry-run-aware helper.
+
+set -u
+set -o pipefail
+
+# ---------------------------------------------------------------------------
+# Resolve the real install directory, following symlinks (install.sh places
+# a symlink at /usr/local/bin/devclean or /opt/homebrew/bin/devclean).
+# ---------------------------------------------------------------------------
+_devclean_resolve_dir() {
+    local src="$1"
+    while [ -h "$src" ]; do
+        local dir
+        dir="$(cd -P "$(dirname "$src")" >/dev/null 2>&1 && pwd)"
+        src="$(readlink "$src")"
+        case "$src" in
+            /*) ;;
+            *) src="$dir/$src" ;;
+        esac
+    done
+    cd -P "$(dirname "$src")" >/dev/null 2>&1 && pwd
+}
+
+DEVCLEAN_HOME="$(_devclean_resolve_dir "${BASH_SOURCE[0]:-$0}")"
+export DEVCLEAN_HOME
+
+# ---------------------------------------------------------------------------
+# Global state
+# ---------------------------------------------------------------------------
+DRY_RUN=0
+export DRY_RUN
+DEVCLEAN_ARGS="$*"
+export DEVCLEAN_ARGS
+
+# ---------------------------------------------------------------------------
+# Source configuration then modules, always by absolute path.
+# ---------------------------------------------------------------------------
+# shellcheck source=config.sh
+source "$DEVCLEAN_HOME/config.sh"
+
+for _mod in colors utils logger ui disk scanner xcode simulator flutter \
+            gradle android cocoapods node docker brew whatsapp cleaner \
+            report doctor; do
+    _mod_path="$DEVCLEAN_HOME/lib/${_mod}.sh"
+    if [ -f "$_mod_path" ]; then
+        # shellcheck disable=SC1090
+        source "$_mod_path"
+    else
+        echo "devclean: missing module: $_mod_path" >&2
+        exit 1
+    fi
+done
+unset _mod _mod_path
+
+logger_init
+
+# ---------------------------------------------------------------------------
+# Argument parsing
+# ---------------------------------------------------------------------------
+COMMAND="menu"
+
+for arg in "$@"; do
+    case "$arg" in
+        --dry-run)
+            DRY_RUN=1
+            ;;
+        --help|-h)
+            show_help
+            exit 0
+            ;;
+        --version|-v)
+            show_version
+            exit 0
+            ;;
+        scan|clean|doctor|report|menu)
+            COMMAND="$arg"
+            ;;
+        *)
+            echo "devclean: unknown option or command: $arg" >&2
+            echo >&2
+            show_help >&2
+            exit 1
+            ;;
+    esac
+done
+export DRY_RUN
+
+case "$COMMAND" in
+    scan)
+        scan_command
+        ;;
+    clean)
+        clean_menu
+        ;;
+    doctor)
+        doctor_command
+        ;;
+    report)
+        report_command
+        ;;
+    menu)
+        main_menu
+        ;;
+esac

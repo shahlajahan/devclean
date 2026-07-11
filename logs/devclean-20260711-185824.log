@@ -1,0 +1,16 @@
+===================================================
+devclean session started: 2026-07-11T15:58:24Z
+command: devclean clean --dry-run
+dry_run: 0
+user: a
+===================================================
+[2026-07-11T16:11:36Z] [INFO] [DRY-RUN] would run: remove /Users/a/Library/Developer/Xcode/DerivedData (rm -rf -- /Users/a/Library/Developer/Xcode/DerivedData)
+[2026-07-11T16:11:36Z] [ACTION] status=deleted path=/Users/a/Library/Developer/Xcode/DerivedData bytes=5292462080
+[2026-07-11T16:11:36Z] [INFO] [DRY-RUN] would run: pod cache clean --all (pod cache clean --all)
+[2026-07-11T16:11:36Z] [ACTION] status=deleted path=/Users/a/Library/Caches/CocoaPods bytes=369061888
+[2026-07-11T16:11:36Z] [INFO] [DRY-RUN] would run: remove /Users/a/.pub-cache (rm -rf -- /Users/a/.pub-cache)
+[2026-07-11T16:11:36Z] [ACTION] status=deleted path=/Users/a/.pub-cache bytes=700903424
+[2026-07-11T16:11:36Z] [INFO] [DRY-RUN] would run: npm cache clean --force (npm cache clean --force)
+[2026-07-11T16:11:36Z] [ACTION] status=deleted path=/Users/a/.npm bytes=5083226112
+[2026-07-11T16:11:36Z] [INFO] [DRY-RUN] would run: brew cleanup (brew cleanup)
+[2026-07-11T16:11:36Z] [ACTION] status=cleaned path=/Users/a/Library/Caches/Homebrew bytes=510980096
