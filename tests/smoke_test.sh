@@ -35,8 +35,8 @@ fail() { FAIL=$((FAIL + 1)); echo "  FAIL - $1"; }
 
 echo "== Module sourcing =="
 for mod in colors utils logger ui disk scanner xcode simulator flutter \
-           gradle android cocoapods node docker brew whatsapp cleaner \
-           report doctor; do
+           gradle android cocoapods node bun docker brew whatsapp update \
+           cleaner report doctor; do
     modpath="$DEVCLEAN_HOME/lib/${mod}.sh"
     if [ ! -f "$modpath" ]; then
         fail "module exists: $mod"
@@ -89,6 +89,21 @@ if grep -q "Estimated reclaimable" /tmp/devclean_test_scan.log; then
 else
     fail "scan prints a summary"
 fi
+if grep -q "^Bun$" /tmp/devclean_test_scan.log; then
+    ok "scan includes a Bun section (v1.1.0)"
+else
+    fail "scan includes a Bun section (v1.1.0)"
+fi
+if grep -q "Top Space Consumers" /tmp/devclean_test_scan.log; then
+    ok "scan prints Top Space Consumers (v1.1.0)"
+else
+    fail "scan prints Top Space Consumers (v1.1.0)"
+fi
+if grep -qE '\[#*\.*\] *[0-9]+%' /tmp/devclean_test_scan.log; then
+    ok "scan renders a progress bar line (v1.1.0)"
+else
+    fail "scan renders a progress bar line (v1.1.0)"
+fi
 
 echo
 echo "== devclean doctor runs cleanly (missing optional tools handled) =="
@@ -97,14 +112,24 @@ if "$DEVCLEAN_BIN" doctor >/tmp/devclean_test_doctor.log 2>&1; then
 else
     fail "doctor exits 0"
 fi
-if grep -qE "OK|WARNING|MISSING|OPTIONAL" /tmp/devclean_test_doctor.log; then
+if grep -qE "OK|WARNING|ERROR|OPTIONAL" /tmp/devclean_test_doctor.log; then
     ok "doctor prints status labels"
 else
     fail "doctor prints status labels"
 fi
+if grep -qE "pnpm|Bun" /tmp/devclean_test_doctor.log; then
+    ok "doctor checks pnpm/yarn/Bun (v1.1.0)"
+else
+    fail "doctor checks pnpm/yarn/Bun (v1.1.0)"
+fi
+if grep -qE '^[0-9]+ / 100$' /tmp/devclean_test_doctor.log; then
+    ok "doctor prints a health score (v1.1.0)"
+else
+    fail "doctor prints a health score (v1.1.0)"
+fi
 
 echo
-echo "== devclean report generates valid TXT + JSON =="
+echo "== devclean report generates valid TXT + JSON + Markdown =="
 before_count=$(find "$DEVCLEAN_HOME/reports" -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
 if "$DEVCLEAN_BIN" report >/tmp/devclean_test_report.log 2>&1; then
     ok "report exits 0"
@@ -140,6 +165,23 @@ if [ -n "$latest_json" ]; then
         ok "matching TXT report exists"
     else
         fail "matching TXT report exists"
+    fi
+
+    latest_md="${latest_json%.json}.md"
+    if [ -f "$latest_md" ]; then
+        ok "matching Markdown report exists (v1.1.0)"
+        if grep -q "^# System Summary" "$latest_md" \
+           && grep -q "^## Disk" "$latest_md" \
+           && grep -q "^## Developer Tools" "$latest_md" \
+           && grep -q "^## Caches" "$latest_md" \
+           && grep -q "^## Estimated Reclaimable" "$latest_md" \
+           && grep -q "^## Recommendations" "$latest_md"; then
+            ok "Markdown report has all expected sections (v1.1.0)"
+        else
+            fail "Markdown report has all expected sections (v1.1.0)"
+        fi
+    else
+        fail "matching Markdown report exists (v1.1.0)"
     fi
 else
     fail "found a generated JSON report"
@@ -195,9 +237,49 @@ else
     ok "unknown command exits non-zero"
 fi
 
+echo
+echo "== devclean update degrades gracefully (v1.1.0) =="
+# Never hangs (curl --max-time bounds it) and never crashes with a raw
+# bash error, regardless of network state - it always at least reports
+# the current version before attempting the network call.
+"$DEVCLEAN_BIN" update >/tmp/devclean_test_update.log 2>&1
+update_rc=$?
+if [ "$update_rc" -eq 0 ] || [ "$update_rc" -eq 1 ]; then
+    ok "update exits 0 (found result) or 1 (handled failure), never a crash"
+else
+    fail "update exits 0 or 1 (got $update_rc)"
+fi
+if grep -q "Current version:" /tmp/devclean_test_update.log; then
+    ok "update prints the current version"
+else
+    fail "update prints the current version"
+fi
+if grep -qiE "unbound variable|command not found|syntax error" /tmp/devclean_test_update.log; then
+    fail "update produced no raw bash errors"
+else
+    ok "update produced no raw bash errors"
+fi
+
+echo
+echo "== Multi-select cleanup cancels safely (v1.1.0) =="
+# '12' opens multi-select from the clean menu, 'q' cancels immediately,
+# '0' exits the clean menu. Proves the new interactive flow never
+# deletes anything and always terminates.
+if printf '12\nq\n0\n' | "$DEVCLEAN_BIN" clean >/tmp/devclean_test_multiselect.log 2>&1; then
+    ok "multi-select cancel flow exits 0"
+else
+    fail "multi-select cancel flow exits 0"
+fi
+if grep -q "Cancelled." /tmp/devclean_test_multiselect.log; then
+    ok "multi-select cancel prints 'Cancelled.'"
+else
+    fail "multi-select cancel prints 'Cancelled.'"
+fi
+
 rm -f /tmp/devclean_test_err /tmp/devclean_test_scan.log /tmp/devclean_test_doctor.log \
       /tmp/devclean_test_report.log /tmp/devclean_test_json_err /tmp/devclean_test_dryrun.log \
-      /tmp/devclean_test_dryscan.log /tmp/devclean_test_unknown.log
+      /tmp/devclean_test_dryscan.log /tmp/devclean_test_unknown.log /tmp/devclean_test_update.log \
+      /tmp/devclean_test_multiselect.log
 
 echo
 echo "smoke_test.sh: $PASS passed, $FAIL failed"

@@ -57,6 +57,14 @@ simulator_device_path() {
     printf '%s/%s' "$CORESIMULATOR_DEVICES_DIR" "$1"
 }
 
+simulator_devices_bytes() {
+    path_size_bytes "$CORESIMULATOR_DEVICES_DIR"
+}
+
+simulator_caches_bytes() {
+    path_size_bytes "$CORESIMULATOR_CACHES_DIR"
+}
+
 simulator_scan() {
     section_header "iOS Simulator"
     if ! simulator_available; then
@@ -73,8 +81,8 @@ simulator_scan() {
     done
 
     print_kv "Devices:" "$count (booted: $booted)"
-    print_kv "Devices data ($CORESIMULATOR_DEVICES_DIR):" "$(human_size "$(path_size_bytes "$CORESIMULATOR_DEVICES_DIR")")"
-    print_kv "Simulator caches:" "$(human_size "$(path_size_bytes "$CORESIMULATOR_CACHES_DIR")")"
+    print_kv "Devices data ($CORESIMULATOR_DEVICES_DIR):" "$(human_size "$(simulator_devices_bytes)")"
+    print_kv "Simulator caches:" "$(human_size "$(simulator_caches_bytes)")"
 }
 
 simulator_list_table() {

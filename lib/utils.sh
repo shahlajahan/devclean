@@ -124,6 +124,34 @@ human_size() {
     }'
 }
 
+# version_gt <a> <b>
+# True (0) if dotted-numeric version <a> is strictly greater than <b>.
+# Non-numeric components compare as 0. Used by the update checker; kept
+# here (rather than in lib/update.sh) because it's pure logic with no
+# network dependency, so it can be unit tested in isolation.
+version_gt() {
+    local a="$1" b="$2"
+    [ "$a" = "$b" ] && return 1
+
+    local -a av bv
+    IFS=. read -ra av <<< "$a"
+    IFS=. read -ra bv <<< "$b"
+
+    local max=${#av[@]}
+    [ "${#bv[@]}" -gt "$max" ] && max=${#bv[@]}
+
+    local i ai bi
+    for ((i = 0; i < max; i++)); do
+        ai="${av[i]:-0}"
+        bi="${bv[i]:-0}"
+        case "$ai" in ''|*[!0-9]*) ai=0 ;; esac
+        case "$bi" in ''|*[!0-9]*) bi=0 ;; esac
+        [ "$ai" -gt "$bi" ] && return 0
+        [ "$ai" -lt "$bi" ] && return 1
+    done
+    return 1
+}
+
 sum_bytes() {
     # sum_bytes b1 b2 b3 ...
     local total=0

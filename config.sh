@@ -2,7 +2,11 @@
 # devclean configuration - default thresholds and well-known paths.
 # DEVCLEAN_HOME must already be exported by the caller before this is sourced.
 
-DEVCLEAN_VERSION="1.0.0"
+DEVCLEAN_VERSION="1.1.0"
+
+# GitHub repo checked by `devclean update` (read-only - never auto-updates).
+# Override with the DEVCLEAN_UPDATE_REPO environment variable.
+DEVCLEAN_REPO="${DEVCLEAN_UPDATE_REPO:-shahlajahan/devclean}"
 
 # Directories devclean writes to (created on demand, never assumed to exist).
 LOGS_DIR="${DEVCLEAN_HOME}/logs"

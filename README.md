@@ -5,6 +5,39 @@
 
 ---
 
+# Installation
+
+## Clone the repository
+
+```bash
+git clone https://github.com/shahlajahan/devclean.git
+cd devclean
+```
+
+## Install
+
+```bash
+./install.sh
+```
+
+## Verify
+
+```bash
+devclean --version
+```
+
+Expected output:
+
+```
+devclean version 1.1.0
+```
+
+## Run
+
+```bash
+devclean scan
+```
+
 ## Quick Clean Preview
 
 ![Quick Clean](assets/screenshots/quick-clean.png)
@@ -29,18 +62,19 @@ devclean scans your complete development environment and estimates reclaimable s
 ![Scan](assets/screenshots/scan.png)
 
 - Audit developer disk usage
--  Diagnose development environment (`doctor`)
--  Safe cache cleanup
+-  Diagnose development environment (`doctor`) with a 0-100 health score
+-  Safe cache cleanup, one category at a time or multi-select
 -  Global `--dry-run` mode
--  TXT & JSON reports
+-  TXT, JSON & Markdown reports
 -  Xcode cleanup
 -  iOS Simulator cleanup
 -  Flutter & Dart cleanup
 -  Android & Gradle cleanup
--  Node / npm cleanup
+-  Node / npm / yarn / pnpm / Bun cleanup
 -  Homebrew cleanup
 -  Docker cleanup
 -  WhatsApp storage audit (read-only)
+-  Check for updates (`devclean update`, never auto-updates)
 
 ---
 
@@ -140,9 +174,10 @@ devclean
 |----------|-------------|
 | `devclean` | Interactive menu |
 | `devclean scan` | Disk usage audit |
-| `devclean clean` | Cleanup menu |
-| `devclean doctor` | Environment diagnostics |
-| `devclean report` | TXT + JSON reports |
+| `devclean clean` | Cleanup menu (includes multi-select) |
+| `devclean doctor` | Environment diagnostics + health score |
+| `devclean report` | TXT + JSON + Markdown reports |
+| `devclean update` | Check GitHub for a newer release (read-only) |
 | `devclean --dry-run` | Preview without deleting |
 
 
@@ -164,7 +199,8 @@ Check your development environment in seconds.
 | Flutter pub-cache | ✅ |
 | Gradle cache | ✅ |
 | CocoaPods cache | ✅ |
-| npm cache | ✅ |
+| npm / yarn / pnpm cache | ✅ |
+| Bun cache | ✅ |
 | Homebrew cache | ✅ |
 | Docker | ✅ |
 
@@ -220,9 +256,14 @@ Outputs:
 
 ```
 reports/
-    devclean-report-20260711.txt
-    devclean-report-20260711.json
+    devclean-report-20260711-221057.txt
+    devclean-report-20260711-221057.json
+    devclean-report-20260711-221057.md
 ```
+
+The Markdown report is GitHub-friendly (renders directly if you commit it
+or paste it into an issue/PR) and covers Disk, Developer Tools, Caches,
+Estimated Reclaimable, and Recommendations.
 
 ---
 
@@ -250,19 +291,27 @@ bash tests/smoke_test.sh
 
 # Roadmap
 
-## v1.1
+## v1.1.0 (released)
 
-- Interactive progress bars
+- Multi-select cleanup (choose several categories, run them in sequence)
+- Markdown reports alongside TXT/JSON
+- ASCII progress indicator during `scan`
+- Bun detection, scan, doctor, and cache cleanup
+- pnpm version detection
+- Doctor health score (0-100) and OK/WARNING/ERROR/OPTIONAL tiers
+- `devclean update` - checks the latest GitHub Release (never auto-updates)
+
+## Future ideas
+
 - Disk usage history
 - Faster scanning
 - Brew package analysis
 - Export HTML reports
-
-## v1.2
-
 - Plugin architecture
 - CI support
-- Automatic update checker
+
+Note: devclean will not add an *automatic* updater - manual, explicit
+updates are part of the safety philosophy, not a temporary gap.
 
 ---
 

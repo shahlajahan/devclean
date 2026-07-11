@@ -108,6 +108,8 @@ clean_menu() {
   8) CocoaPods cleanup
   9) Homebrew cleanup
  10) WhatsApp storage audit
+ 11) Bun cleanup
+ 12) Multi-select cleanup
   0) Exit
 EOF
         echo
@@ -125,9 +127,68 @@ EOF
             8) cocoapods_menu ;;
             9) brew_menu ;;
             10) whatsapp_menu ;;
+            11) bun_menu ;;
+            12) multi_select_clean_menu ;;
             0) break ;;
             *) echo "Unknown option: $choice" ;;
         esac
         echo
+    done
+}
+
+# multi_select_clean_menu
+# Lets the user pick several cleanup categories at once, then runs each
+# selected category's existing interactive menu in sequence. This is pure
+# orchestration - it introduces no new cleanup logic, so every category
+# keeps its own existing per-item confirmation (y/N or DELETE) untouched.
+multi_select_clean_menu() {
+    local labels=(
+        "Xcode cleanup"
+        "Simulator cleanup"
+        "Android / Gradle cleanup"
+        "Flutter cleanup"
+        "Node cleanup"
+        "Bun cleanup"
+        "Docker cleanup"
+        "CocoaPods cleanup"
+        "Homebrew cleanup"
+    )
+    local funcs=(
+        xcode_menu
+        simulator_menu
+        android_gradle_menu
+        flutter_menu
+        node_menu
+        bun_menu
+        docker_menu
+        cocoapods_menu
+        brew_menu
+    )
+
+    local selection
+    if ! selection="$(multi_select_prompt "Multi-select cleanup - choose one or more categories" "${labels[@]}")"; then
+        echo "Cancelled."
+        return 0
+    fi
+    if [ -z "$selection" ]; then
+        echo "Nothing selected."
+        return 0
+    fi
+
+    echo
+    echo "Will open, in order:"
+    local idx
+    for idx in $selection; do
+        echo "  - ${labels[$((idx - 1))]}"
+    done
+    echo
+
+    if ! confirm_yes_no "Proceed through the selected categories in order?"; then
+        echo "Cancelled."
+        return 0
+    fi
+
+    for idx in $selection; do
+        "${funcs[$((idx - 1))]}"
     done
 }

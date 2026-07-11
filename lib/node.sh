@@ -30,6 +30,10 @@ node_pnpm_store_dir() {
     fi
 }
 
+node_pnpm_version() {
+    command_exists pnpm && pnpm --version 2>/dev/null
+}
+
 node_npm_cache_bytes() {
     local dir
     dir="$(node_npm_cache_dir)"
@@ -65,7 +69,7 @@ node_scan() {
         print_kv "yarn:" "not installed"
     fi
     if command_exists pnpm; then
-        print_kv "pnpm store ($(node_pnpm_store_dir)):" "$(human_size "$(node_pnpm_store_bytes)")"
+        print_kv "pnpm store ($(node_pnpm_store_dir)):" "$(human_size "$(node_pnpm_store_bytes)") - v$(node_pnpm_version)"
     else
         print_kv "pnpm:" "not installed"
     fi

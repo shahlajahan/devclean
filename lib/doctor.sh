@@ -3,7 +3,33 @@
 # Never installs or modifies anything; purely diagnostic.
 
 _DOCTOR_WARNINGS=0
-_DOCTOR_MISSING=0
+_DOCTOR_ERRORS=0
+_DOCTOR_SCORE_EARNED=0
+_DOCTOR_SCORE_POSSIBLE=0
+_DOCTOR_RECOMMENDATIONS=()
+_DOCTOR_REC_HINTS=()
+_DOCTOR_OPTIONAL_MISSING=()
+
+# _doctor_fix_hint <name>
+# A short, known fix for a subset of checks - pure lookup, no side
+# effects, so it's unit testable. Empty output means "no known hint",
+# and callers only print a Fix line when this returns non-empty.
+_doctor_fix_hint() {
+    case "$1" in
+        "Xcode.app") echo "Install Xcode from the App Store" ;;
+        "xcode-select path") echo "Run: xcode-select --install" ;;
+        "xcrun") echo "Install Xcode command line tools: xcode-select --install" ;;
+        "Flutter") echo "Install from https://flutter.dev" ;;
+        "Dart") echo "Installed automatically with the Flutter SDK" ;;
+        "Java") echo "Install a JDK, e.g. brew install openjdk" ;;
+        "Android SDK") echo "Open Android Studio -> SDK Manager" ;;
+        "adb") echo "Ensure Android platform-tools are on PATH" ;;
+        "Node") echo "Install from https://nodejs.org or via Homebrew" ;;
+        "npm") echo "Installed automatically with Node.js" ;;
+        "Git") echo "Install Xcode command line tools: xcode-select --install" ;;
+        *) echo "" ;;
+    esac
+}
 
 _doctor_line() {
     # _doctor_line <status> <name> <detail>
@@ -11,11 +37,33 @@ _doctor_line() {
     local color label
 
     case "$status" in
-        OK) color="$COLOR_GREEN"; label="OK      " ;;
-        WARNING) color="$COLOR_YELLOW"; label="WARNING "; _DOCTOR_WARNINGS=$((_DOCTOR_WARNINGS + 1)) ;;
-        MISSING) color="$COLOR_RED"; label="MISSING "; _DOCTOR_MISSING=$((_DOCTOR_MISSING + 1)) ;;
-        OPTIONAL) color="$COLOR_DIM"; label="OPTIONAL" ;;
-        *) color="$COLOR_RESET"; label="$status" ;;
+        OK)
+            color="$COLOR_GREEN"; label="OK      "
+            _DOCTOR_SCORE_EARNED=$((_DOCTOR_SCORE_EARNED + 2))
+            _DOCTOR_SCORE_POSSIBLE=$((_DOCTOR_SCORE_POSSIBLE + 2))
+            ;;
+        WARNING)
+            color="$COLOR_YELLOW"; label="WARNING "
+            _DOCTOR_WARNINGS=$((_DOCTOR_WARNINGS + 1))
+            _DOCTOR_SCORE_EARNED=$((_DOCTOR_SCORE_EARNED + 1))
+            _DOCTOR_SCORE_POSSIBLE=$((_DOCTOR_SCORE_POSSIBLE + 2))
+            _DOCTOR_RECOMMENDATIONS+=("$name: $detail")
+            _DOCTOR_REC_HINTS+=("$(_doctor_fix_hint "$name")")
+            ;;
+        ERROR)
+            color="$COLOR_RED"; label="ERROR   "
+            _DOCTOR_ERRORS=$((_DOCTOR_ERRORS + 1))
+            _DOCTOR_SCORE_POSSIBLE=$((_DOCTOR_SCORE_POSSIBLE + 2))
+            _DOCTOR_RECOMMENDATIONS+=("$name: $detail")
+            _DOCTOR_REC_HINTS+=("$(_doctor_fix_hint "$name")")
+            ;;
+        OPTIONAL)
+            color="$COLOR_DIM"; label="OPTIONAL"
+            _DOCTOR_OPTIONAL_MISSING+=("$name")
+            ;;
+        *)
+            color="$COLOR_RESET"; label="$status"
+            ;;
     esac
 
     printf '  %b%-8s%b %-28s %s\n' "$color" "$label" "$COLOR_RESET" "$name" "$detail"
@@ -29,9 +77,26 @@ _doctor_cmd_version() {
     "$cmd" "$@" 2>/dev/null | head -n1
 }
 
+# _doctor_score <earned> <possible>
+# Pure integer-percentage calculation, kept separate from _doctor_line so
+# it can be unit tested without running the full doctor sweep.
+_doctor_score() {
+    local earned="${1:-0}" possible="${2:-0}"
+    if [ "$possible" -le 0 ]; then
+        echo 100
+        return 0
+    fi
+    awk -v e="$earned" -v p="$possible" 'BEGIN { printf "%d", (e / p) * 100 }'
+}
+
 doctor_command() {
     _DOCTOR_WARNINGS=0
-    _DOCTOR_MISSING=0
+    _DOCTOR_ERRORS=0
+    _DOCTOR_SCORE_EARNED=0
+    _DOCTOR_SCORE_POSSIBLE=0
+    _DOCTOR_RECOMMENDATIONS=()
+    _DOCTOR_REC_HINTS=()
+    _DOCTOR_OPTIONAL_MISSING=()
 
     section_header "Developer doctor"
 
@@ -41,8 +106,8 @@ doctor_command() {
 
     local free
     free="$(disk_free_bytes)"
-    if [ "$free" -lt 5368709120 ]; then
-        _doctor_line WARNING "Disk free space" "$(human_size "$free") free (low)"
+    if [ "$free" -lt 2147483648 ]; then
+        _doctor_line ERROR "Disk free space" "$(human_size "$free") free (critically low)"
     elif [ "$free" -lt 16106127360 ]; then
         _doctor_line WARNING "Disk free space" "$(human_size "$free") free"
     else
@@ -60,67 +125,85 @@ doctor_command() {
     if [ -n "$xcode_select_path" ]; then
         _doctor_line OK "xcode-select path" "$xcode_select_path"
     else
-        _doctor_line MISSING "xcode-select path" "not configured"
+        _doctor_line ERROR "xcode-select path" "not configured"
     fi
 
     if command_exists xcrun; then
         _doctor_line OK "xcrun" "$(command -v xcrun)"
     else
-        _doctor_line MISSING "xcrun" "not found"
+        _doctor_line ERROR "xcrun" "not found"
     fi
 
     if command_exists flutter; then
         _doctor_line OK "Flutter" "$(_doctor_cmd_version flutter --version)"
     else
-        _doctor_line MISSING "Flutter" "not found on PATH"
+        _doctor_line ERROR "Flutter" "not found on PATH"
     fi
 
     if command_exists dart; then
         _doctor_line OK "Dart" "$(_doctor_cmd_version dart --version)"
     else
-        _doctor_line MISSING "Dart" "not found on PATH"
+        _doctor_line ERROR "Dart" "not found on PATH"
     fi
 
     if command_exists java; then
         _doctor_line OK "Java" "$(java -version 2>&1 | head -n1)"
     else
-        _doctor_line MISSING "Java" "not found on PATH"
+        _doctor_line ERROR "Java" "not found on PATH"
     fi
 
     if [ -d "$ANDROID_HOME_DIR" ]; then
         _doctor_line OK "Android SDK" "$ANDROID_HOME_DIR"
     else
-        _doctor_line MISSING "Android SDK" "not found at $ANDROID_HOME_DIR"
+        _doctor_line ERROR "Android SDK" "not found at $ANDROID_HOME_DIR"
     fi
 
     if command_exists adb; then
         _doctor_line OK "adb" "$(command -v adb)"
     else
-        _doctor_line MISSING "adb" "not found on PATH"
+        _doctor_line ERROR "adb" "not found on PATH"
     fi
 
     if command_exists pod; then
         _doctor_line OK "CocoaPods" "$(_doctor_cmd_version pod --version)"
     else
-        _doctor_line MISSING "CocoaPods" "not found on PATH (gem install cocoapods)"
+        _doctor_line ERROR "CocoaPods" "not found on PATH (gem install cocoapods)"
     fi
 
     if command_exists ruby; then
         _doctor_line OK "Ruby" "$(_doctor_cmd_version ruby --version)"
     else
-        _doctor_line MISSING "Ruby" "not found on PATH"
+        _doctor_line ERROR "Ruby" "not found on PATH"
     fi
 
     if command_exists node; then
         _doctor_line OK "Node" "$(_doctor_cmd_version node --version)"
     else
-        _doctor_line MISSING "Node" "not found on PATH"
+        _doctor_line ERROR "Node" "not found on PATH"
     fi
 
     if command_exists npm; then
         _doctor_line OK "npm" "$(_doctor_cmd_version npm --version)"
     else
-        _doctor_line MISSING "npm" "not found on PATH"
+        _doctor_line ERROR "npm" "not found on PATH"
+    fi
+
+    if command_exists yarn; then
+        _doctor_line OK "yarn" "$(_doctor_cmd_version yarn --version)"
+    else
+        _doctor_line OPTIONAL "yarn" "not installed"
+    fi
+
+    if command_exists pnpm; then
+        _doctor_line OK "pnpm" "$(_doctor_cmd_version pnpm --version)"
+    else
+        _doctor_line OPTIONAL "pnpm" "not installed"
+    fi
+
+    if command_exists bun; then
+        _doctor_line OK "Bun" "$(_doctor_cmd_version bun --version)"
+    else
+        _doctor_line OPTIONAL "Bun" "not installed"
     fi
 
     if command_exists firebase; then
@@ -132,7 +215,7 @@ doctor_command() {
     if command_exists git; then
         _doctor_line OK "Git" "$(_doctor_cmd_version git --version)"
     else
-        _doctor_line MISSING "Git" "not found on PATH"
+        _doctor_line ERROR "Git" "not found on PATH"
     fi
 
     if command_exists docker; then
@@ -159,5 +242,34 @@ doctor_command() {
 
     echo
     print_kv "Warnings:" "$_DOCTOR_WARNINGS"
-    print_kv "Missing:" "$_DOCTOR_MISSING"
+    print_kv "Errors:" "$_DOCTOR_ERRORS"
+
+    section_header "Developer Environment"
+    echo "$(_doctor_score "$_DOCTOR_SCORE_EARNED" "$_DOCTOR_SCORE_POSSIBLE") / 100"
+
+    if [ "${#_DOCTOR_RECOMMENDATIONS[@]}" -gt 0 ] || [ "${#_DOCTOR_OPTIONAL_MISSING[@]}" -gt 0 ]; then
+        echo
+        echo "Recommendations"
+
+        if [ "${#_DOCTOR_RECOMMENDATIONS[@]}" -gt 0 ]; then
+            echo
+            echo "Required"
+            local idx=0 rec hint
+            for rec in "${_DOCTOR_RECOMMENDATIONS[@]}"; do
+                echo "  - $rec"
+                hint="${_DOCTOR_REC_HINTS[$idx]:-}"
+                [ -n "$hint" ] && echo "      Fix: $hint"
+                idx=$((idx + 1))
+            done
+        fi
+
+        if [ "${#_DOCTOR_OPTIONAL_MISSING[@]}" -gt 0 ]; then
+            echo
+            echo "Optional tools"
+            local opt
+            for opt in "${_DOCTOR_OPTIONAL_MISSING[@]}"; do
+                echo "  - $opt"
+            done
+        fi
+    fi
 }
